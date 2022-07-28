@@ -1,9 +1,9 @@
 from ast import literal_eval
 import pandas as pd 
 import re
+import json
 import requests
 from nltk.corpus import wordnet as wn
-
 import spacy
 
 nlp = spacy.load("en_core_web_sm", disable = ['ner', 'parser', 'textcat'])
@@ -21,6 +21,95 @@ nlp = spacy.load("en_core_web_sm", disable = ['ner', 'parser', 'textcat'])
 #                spa_2019=32, spa_2012=21, spa_2009=10,
 #                rus_2019=36, rus_2012=25, rus_2009=12,
 #                ita_2019=33, ita_2012=22)
+
+
+
+def get_reddit_comments(deg_adv, files, source_dir, target_dir, subreddits_file=None, year=2015):
+    for f in files:
+        comments_file = f'{source_dir}/comments_{year}-{f}.bz2'
+        print(comments_file)
+
+        # Read subreddits
+        if subreddits_file:
+            with open(subreddits_file, 'r') as f:
+                subreddits = set(f.read().strip().split('\n'))
+
+        if target_dir:
+            target_file = '{}/comments_extracted_{}.json'.format(
+                target_dir, re.findall(r'\d{4}-\d{2}', comments_file)[0]
+            )
+            print(target_file)
+
+        # Load comments in chunks, filter for adverbs through string search
+        comments = list()
+        for c in pd.read_json(comments_file, compression='bz2', lines=True, dtype=False, chunksize=10000):
+            if subreddits_file:
+                c = c[c.subreddit.isin(subreddits)]
+        
+            c = c[c['body'].str.contains(' \w+\.|'.join(deg_adv))]
+            # c = c[c['body'].str.contains(f'{deg_adv[0]} \w+\.')]
+            comments.append(c)
+        
+        # concat
+        comments = pd.concat(comments, sort=True)
+        print(len(comments))
+        
+        # for each adv, get df containing adv+word+.
+        comments_adv = list()
+        for adv in deg_adv:
+            adv_df = comments[comments['body'].str.contains(f'{adv} \w+\.')]
+            
+            # get the positions of adv in each comment
+            positions = [i for i in enumerate(adv_df['body'].str.find(adv)) if i[1] != -1]
+            filtered_positions = []
+            
+            # for each position, get adverbial expression and check that second word POS is ADJ
+            for p in positions:
+                try:
+                    adv_exp = re.findall(f'{adv} \w+\.', adv_df['body'].iloc[p[0]][p[1]:])[0]
+                    doc_exp = nlp(adv_exp)
+                    if doc_exp[-2].pos_ == 'ADJ':
+    #                     print('EXPRESSION:', adv_exp)
+    #                     print('COMMENT:', adv_df['body'].iloc[p[0]])
+                        filtered_positions.append(p[0])
+                except Exception as e:
+                    continue
+                    
+            adv_df_filt = adv_df.iloc[filtered_positions]
+            comments_adv.append(adv_df_filt)
+        
+        # concat
+        comments_adv = pd.concat(comments_adv, sort=True)
+        print(len(comments_adv))
+        
+        # Store extracted comments
+        comments_adv.to_json(
+                target_file,
+                orient='records',
+                lines=True
+            )
+
+    dfs = []
+
+    for f in files:
+        print(f)
+        comments_file = f'{target_dir}/comments_extracted_{year}-{f}.json'
+
+        comments = []
+
+        with open(comments_file) as f:
+            for line in f:
+                comment = json.loads(line)
+                comments.append(comment)
+
+        df = pd.DataFrame(comments)
+        dfs.append(df)
+
+    final_df = pd.concat(dfs, sort=True)
+    final_df = final_df.drop_duplicates(subset = ['body'])
+    final_df = final_df.reset_index(drop=True)
+    final_path = f'{target_dir}/final_df.csv'
+    final_df.to_csv(final_path)
 
 
 def extract_unstacked_phrases_and_context(deg_adv, df):
@@ -125,26 +214,34 @@ def create_sample_dataset(original_df, deg_adv, sample_size_per_token = 40, cont
         print(adv)
 
         # drop duplicates
+        if type(original_df['adv_exp'].iloc[0] != str):
+            original_df['adv_exp'] = original_df['adv_exp'].apply(lambda x: str(x))
+            
         df_adv = original_df[original_df['adv_exp'].str.contains(f"'{adv}'")]
+
         df_no_dup = df_adv.drop_duplicates(subset = 'adv_exp')
 
         # remove 0 frequencies
-        no_zero = df_no_dup[df_no_dup['frequencies']!= 0]
+        if 'frequencies' in original_df.columns:
+            no_zero = df_no_dup[df_no_dup['frequencies']!= 0]
+        else:
+            no_zero = df_no_dup
 
         # restrict to context of desired length
         no_zero = no_zero[no_zero['sentences'].apply(lambda x: len(x.split()) >= context_length[0] and len(x.split()) <= context_length[1])]
         no_zero = no_zero.reset_index()
 
         # select most and least frequent expressions 
-        max_idx = no_zero['frequencies'].idxmax()
-        min_idx =  no_zero['frequencies'].idxmin()
-        clean = no_zero.drop([max_idx, min_idx])
-
-        # select other expressions at random
-        random = clean.sample(n=sample_size_per_token-2, random_state=1)
-
-        sample_df = sample_df.append(no_zero.iloc[min_idx])
-        sample_df = sample_df.append(no_zero.iloc[max_idx])
+        if 'frequencies' in original_df.columns:
+            max_idx = no_zero['frequencies'].idxmax()
+            min_idx =  no_zero['frequencies'].idxmin()
+            clean = no_zero.drop([max_idx, min_idx])
+            # select other expressions at random
+            random = clean.sample(n=sample_size_per_token-2, random_state=1)
+            sample_df = sample_df.append(no_zero.iloc[min_idx])
+            sample_df = sample_df.append(no_zero.iloc[max_idx])
+        else:
+            random = no_zero.sample(n=sample_size_per_token, random_state=1)
         sample_df = sample_df.append(random)
     
     return sample_df

@@ -1,27 +1,54 @@
 import numpy as np
-from transformers import BertTokenizer, TFBertForMaskedLM
 import tensorflow as tf
+from transformers import BertTokenizer, TFBertForMaskedLM, RobertaTokenizer, TFRobertaForMaskedLM, GPT2Tokenizer, TFGPT2LMHeadModel
 
-# tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
-# model = TFBertForMaskedLM.from_pretrained('bert-large-cased')
-tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-model = TFBertForMaskedLM.from_pretrained('bert-base-cased')
+tokenizer_large = BertTokenizer.from_pretrained('bert-large-cased')
+model_large = TFBertForMaskedLM.from_pretrained('bert-large-cased')
+tokenizer_base = BertTokenizer.from_pretrained('bert-base-cased')
+model_base = TFBertForMaskedLM.from_pretrained('bert-base-cased')
+tokenizer_berta = RobertaTokenizer.from_pretrained('roberta-large')
+model_berta = TFRobertaForMaskedLM.from_pretrained('roberta-large')
+tokenizer_gpt2 = GPT2Tokenizer.from_pretrained("gpt2")
+model_gpt2 = TFGPT2LMHeadModel.from_pretrained("gpt2")
 
-def get_top_k_predictions(input_string, target, k=10, tokenizer=tokenizer, model=model):
+
+def get_top_k_predictions(input_string, target,  model_name, k=10):
     '''
     Function to get bert ranking and pred for not, for target and top k predictions
     '''
-
+    
+    if model_name == 'bert_large':
+        tokenizer = tokenizer_large
+        model = model_large
+        mask_token = tokenizer.encode('[MASK]')[-2]
+        adv_token = tokenizer.encode(target)[1] 
+        neg_token = tokenizer.encode(['not'])[1] 
+    if model_name == 'bert_base':
+        tokenizer = tokenizer_base
+        model = model_base
+        mask_token = tokenizer.encode('[MASK]')[-2]
+        adv_token = tokenizer.encode(target)[1] 
+        neg_token = tokenizer.encode(['not'])[1] 
+    if model_name =='roberta':
+        tokenizer = tokenizer_berta
+        model = model_berta
+        mask_token = tokenizer.mask_token_id
+        adv_token = tokenizer.encode(' ' + target)[1]
+        neg_token = tokenizer.encode(' not')[1]
+    if model_name == 'gpt2':
+        tokenizer = tokenizer_gpt2
+        model = model_gpt2
+        adv_token = tokenizer.encode(' ' + target)[0]
+        neg_token = tokenizer.encode(' not')[0]
+        
     tokenized_inputs = tokenizer(input_string, return_tensors="tf")
     outputs = model(tokenized_inputs["input_ids"], return_dict = True)
-    mask_token = tokenizer.encode('[MASK]')[-2]
-
-    # get the index of adv in voc
-    adv_token = tokenizer.encode([target])[1] 
-    neg_token = tokenizer.encode(['not'])[1] 
 
     # get the index of adv in sentence
-    adv_index = np.where(tokenized_inputs['input_ids'].numpy()[0] == mask_token)[0][0]
+    if model_name == 'gpt2':
+        adv_index = np.where(tokenized_inputs['input_ids'].numpy()[0] == adv_token)[0][0] - 1
+    else:
+        adv_index = np.where(tokenized_inputs['input_ids'].numpy()[0] == mask_token)[0][0]
 
     # get the top k logits for adv position in sentence
     top_k_indices = tf.math.top_k(outputs.logits, k).indices[0].numpy()[adv_index]
@@ -34,7 +61,10 @@ def get_top_k_predictions(input_string, target, k=10, tokenizer=tokenizer, model
     top_k_prob = all_prob [top_k_indices]
 
     # get words for top prob
-    decoded_top = tokenizer.decode(top_k_indices)
+    if model_name == 'roberta':
+        decoded_top = [tokenizer.decode(i) for i in top_k_indices]
+    else:
+        decoded_top = tokenizer.decode(top_k_indices).split()
 
     # get prob for adv 
     adv_prob =  all_prob[adv_token]
@@ -44,11 +74,13 @@ def get_top_k_predictions(input_string, target, k=10, tokenizer=tokenizer, model
     neg_prob = all_prob[neg_token]
     neg_rank = np.where(sorted_prob == neg_token)[0][0]
     
-    return (neg_rank, neg_prob), (adv_rank, adv_prob), list(zip(decoded_top.split(), top_k_prob))
+#     if model_name == 'gpt2':
+#         adv_prob = adv_prob[0]
+#         neg_prob = neg_prob[0]
+    
+    return (neg_rank, neg_prob), (adv_rank, adv_prob), list(zip(decoded_top, top_k_prob))
 
-
-
-def get_negation_performance(df, predictions_column):
+def get_negation_performance(df_sent, predictions_column):
     '''
     Get number of top 1 and top 10 'not' predictions,
     as well as number of times 'not' ranked above target
