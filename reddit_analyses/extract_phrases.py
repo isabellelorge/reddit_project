@@ -3,28 +3,33 @@ import pandas as pd
 import re
 import json
 import requests
+import nltk
+nltk.download('omw-1.4')
 from nltk.corpus import wordnet as wn
 import spacy
 
 nlp = spacy.load("en_core_web_sm", disable = ['ner', 'parser', 'textcat'])
 
 
-# corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_us_2019=28,
-#                eng_gb_2012=18, eng_gb_2009=6, eng_gb_2019=26,
-#                chi_sim_2019=34, chi_sim_2012=23, chi_sim_2009=11,
-#                eng_2012=15, eng_2009=0,
-#                eng_fiction_2012=16, eng_fiction_2009=4, eng_1m_2009=1,
-#                fre_2019=30, fre_2012=19, fre_2009=7,
-#                ger_2019=31, ger_2012=20, ger_2009=8,
-#                heb_2012=24,
-#                heb_2009=9,
-#                spa_2019=32, spa_2012=21, spa_2009=10,
-#                rus_2019=36, rus_2012=25, rus_2009=12,
-#                ita_2019=33, ita_2012=22)
+corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_us_2019=28,
+               eng_gb_2012=18, eng_gb_2009=6, eng_gb_2019=26,
+               chi_sim_2019=34, chi_sim_2012=23, chi_sim_2009=11,
+               eng_2012=15, eng_2009=0,
+               eng_fiction_2012=16, eng_fiction_2009=4, eng_1m_2009=1,
+               fre_2019=30, fre_2012=19, fre_2009=7,
+               ger_2019=31, ger_2012=20, ger_2009=8,
+               heb_2012=24,
+               heb_2009=9,
+               spa_2019=32, spa_2012=21, spa_2009=10,
+               rus_2019=36, rus_2012=25, rus_2009=12,
+               ita_2019=33, ita_2012=22)
 
 
 
 def get_reddit_comments(deg_adv, files, source_dir, target_dir, subreddits_file=None, year=2015):
+    # files are the numbers from partitions, eg ['01', '02', '03', ...]
+    # source_dir = the zipped files
+    # target_dir = where to store
     for f in files:
         comments_file = f'{source_dir}/comments_{year}-{f}.bz2'
         print(comments_file)
@@ -287,7 +292,7 @@ def create_contradiction_examples(original_sentences):
                     
         # only use antonym if synonym not found
         if syno == False and anto != '':
-            if adv == 'sometimes':
+            if adv in ['sometimes', 'occasionally']:
                 synth.append(f'I do not think it is {anto}. In fact, it is {adv} {adj}.')
             else:
                 synth.append(f'It is not {anto}. In fact, it is {adv} {adj}.')

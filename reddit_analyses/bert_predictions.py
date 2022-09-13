@@ -1,16 +1,42 @@
 import numpy as np
 import tensorflow as tf
-from transformers import BertTokenizer, TFBertForMaskedLM, RobertaTokenizer, TFRobertaForMaskedLM, GPT2Tokenizer, TFGPT2LMHeadModel
+from transformers import RobertaModel, BertModel, BertTokenizer, TFBertForMaskedLM, RobertaTokenizer, TFRobertaForMaskedLM, GPT2Tokenizer, TFGPT2LMHeadModel
 
 tokenizer_large = BertTokenizer.from_pretrained('bert-large-cased')
 model_large = TFBertForMaskedLM.from_pretrained('bert-large-cased')
+model_large_embed = BertModel.from_pretrained('bert-large-cased')
 tokenizer_base = BertTokenizer.from_pretrained('bert-base-cased')
 model_base = TFBertForMaskedLM.from_pretrained('bert-base-cased')
+model_base_embed = BertModel.from_pretrained('bert-base-cased')
 tokenizer_berta = RobertaTokenizer.from_pretrained('roberta-large')
 model_berta = TFRobertaForMaskedLM.from_pretrained('roberta-large')
+model_berta_embed = RobertaModel.from_pretrained('roberta-large')
 tokenizer_gpt2 = GPT2Tokenizer.from_pretrained("gpt2")
 model_gpt2 = TFGPT2LMHeadModel.from_pretrained("gpt2")
 
+def get_bert_token_embedding(sentence, word, model_name):
+    if model_name == 'bert_large':
+        word = [word.strip()]
+        tokenizer = tokenizer_large
+        model = model_large_embed
+    if model_name == 'bert_base':
+        word = [word.strip()]
+        tokenizer = tokenizer_base
+        model = model_base_embed
+    if model_name == 'roberta':
+        word = ' ' + word
+        tokenizer = tokenizer_berta
+        model = model_berta_embed
+
+    inputs = tokenizer(sentence, return_tensors="pt")
+    outputs = model(**inputs)
+    last_hidden_states = outputs.last_hidden_state
+    word_token = tokenizer.encode(word)[1] 
+    print(word_token)
+    print(tokenizer.decode(word_token))
+    word_index =  np.where(inputs['input_ids'].numpy()[0] == word_token)[0][0]
+    word_embed = last_hidden_states.detach().numpy()[0][word_index]
+    return word_embed
 
 def get_top_k_predictions(input_string, target,  model_name, k=10):
     '''

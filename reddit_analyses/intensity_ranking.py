@@ -2,14 +2,20 @@
 from scipy import stats, spatial
 
 
-def get_sim_dict(deg_adv, temporal, factual, other, embed_dict, ref_vector = str):
-    '''
-    Function to create dictionary with cosine simlarities 
-    '''
+
 def get_sim_dict(deg_adv, temporal, factual, other, embed_dict,  ref_vector=str, vector=None):
     '''
     Function to create dictionary of adverb cosine similarities with reference vector
     '''
+    top_temp = temporal[-1]
+    top_fact = factual[-1]
+    top_oth = other[-1]
+
+    bottom_temp = temporal[1]
+    bottom_fact = factual[0]
+    bottom_oth = other[1]
+
+
     sim_dict = {}
     for i in deg_adv:
         if i not in embed_dict:
@@ -28,22 +34,22 @@ def get_sim_dict(deg_adv, temporal, factual, other, embed_dict,  ref_vector=str,
         
         if ref_vector == 'diff':
             if i in temporal:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['always']- embed_dict['sometimes'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_temp]- embed_dict[bottom_temp])
 
             if i in factual:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['definitely']-embed_dict['maybe'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_fact]-embed_dict[bottom_fact])
 
             if i in other:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['completely']-embed_dict['slightly'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_oth]-embed_dict[bottom_oth])
         if ref_vector == 'top':
             if i in temporal:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['always'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_temp])
 
             if i in factual:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['definitely'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_fact])
 
             if i in other:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict['completely'])
+                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_oth])
         
     return sim_dict
 
