@@ -1,6 +1,6 @@
 
 from scipy import stats, spatial
-
+import numpy as np
 
 
 def get_sim_dict(deg_adv, temporal, factual, other, embed_dict,  ref_vector=str, vector=None):
@@ -17,39 +17,30 @@ def get_sim_dict(deg_adv, temporal, factual, other, embed_dict,  ref_vector=str,
 
 
     sim_dict = {}
-    for i in deg_adv:
-        if i not in embed_dict:
-            adv = i.strip()
-        else:
-            adv = i
+    for adv in deg_adv:
+        if adv not in embed_dict:
+            adv = adv.strip()
         if ref_vector == 'adj':
-            if i in temporal:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], vector)
+            sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], vector) for i in range(len(embed_dict[adv]))])
 
-            if i in factual:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], vector)
-
-            if i in other:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], vector)
-        
         if ref_vector == 'diff':
-            if i in temporal:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_temp]- embed_dict[bottom_temp])
+            if adv in temporal:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_temp][i]-embed_dict[bottom_temp][i]) for i in range(len(embed_dict[adv]))])
 
-            if i in factual:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_fact]-embed_dict[bottom_fact])
+            if adv in factual:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_fact][i]-embed_dict[bottom_fact][i]) for i in range(len(embed_dict[adv]))])
 
-            if i in other:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_oth]-embed_dict[bottom_oth])
+            if adv in other:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_oth][i]-embed_dict[bottom_oth][i]) for i in range(len(embed_dict[adv]))])
         if ref_vector == 'top':
-            if i in temporal:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_temp])
+            if adv in temporal:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_temp][i]) for i in range(len(embed_dict[adv]))])
 
-            if i in factual:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_fact])
+            if adv in factual:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_fact][i]) for i in range(len(embed_dict[adv]))])
 
-            if i in other:
-                sim_dict[i] = 1 - spatial.distance.cosine(embed_dict[adv], embed_dict[top_oth])
+            if adv in other:
+                sim_dict[adv] = np.mean([1 - spatial.distance.cosine(embed_dict[adv][i], embed_dict[top_oth][i]) for i in range(len(embed_dict[adv]))])
         
     return sim_dict
 
