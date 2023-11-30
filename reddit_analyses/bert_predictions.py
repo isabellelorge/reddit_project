@@ -14,6 +14,7 @@ model_berta_embed = RobertaModel.from_pretrained('roberta-large')
 tokenizer_gpt2 = GPT2Tokenizer.from_pretrained("gpt2")
 model_gpt2 = TFGPT2LMHeadModel.from_pretrained("gpt2")
 
+
 def get_bert_token_embedding(sentence, word, model_name):
     if model_name == 'bert_large':
         word = [word.strip()]
@@ -38,11 +39,12 @@ def get_bert_token_embedding(sentence, word, model_name):
     word_embed = last_hidden_states.detach().numpy()[0][word_index]
     return word_embed
 
+
 def get_top_k_predictions(input_string, target,  model_name, k=10):
     '''
     Function to get bert ranking and pred for not, for target and top k predictions
     '''
-    
+   
     if model_name == 'bert_large':
         tokenizer = tokenizer_large
         model = model_large
