@@ -5,9 +5,9 @@ This repository contains the code and data which was used for the analyses on ho
 The pdf of the poster presented at the conference has been added to the repo. 
 
 <!-- ![Alt text](scale.png "Scale") -->
-<div style="text-align:center;">
-<img src="scale.png" width="400" height="150">
-</div>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="scale.png" width="400" height="150">
+
 
 # Citation
 If you use the code or data in this repo please cite the following paper:
