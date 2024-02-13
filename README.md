@@ -1,6 +1,6 @@
 # Not wacky vs. definitely wacky: A study of scalar adverbs in pretrained language models.
 
-This repository contains the code and data which was used for the analyses on how language model handle scalar adverbs presented in the following paper https://arxiv.org/abs/2305.16426, which was selected for the BlackBoxNLP workshop at EMNLP 2023. 
+This repository contains the code and data which was used for the analyses on how language models handle scalar adverbs presented in the following paper https://arxiv.org/abs/2305.16426, presented at BlackBoxNLP workshop at EMNLP 2023. 
 
 The pdf of the poster presented at the conference has been added to the repo. 
 
